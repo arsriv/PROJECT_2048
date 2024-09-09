@@ -179,7 +179,7 @@ class Game {
     gridHelper.createGrid();
     window.addEventListener('keydown', async event => {
       const movements = {
-        u: 'left',
+        a: 'left',
         w: 'up',
         d: 'right',
         s: 'down'
