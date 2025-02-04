@@ -64,10 +64,9 @@ async function move(direction) {
 
   // Copy the current state of the tiles to the tilesValues array
   gridHelper.tiles.forEach(el => {
-    tilesValues[el.position] = { value: el.value, tile: el.tile };
+      tilesValues[el.position] = { value: el.value, tile: el.tile };
   });
 
-  // Variables to keep track of the movements and actions taken during the movement
   let moved = false;
   let tilesToRemove = [[]];
   let tilesToCreate = [[]];
@@ -75,101 +74,101 @@ async function move(direction) {
 
   // Handle left or right movement
   if (direction === 'left' || direction === 'right') {
-    // Iterate through each row of the grid
-    for (let i = 0; i < GRID_SIZE; i++) {
-      // Initialize arrays to store tile movements, removals, and creations for each row
-      tilesToSlide[i] = [];
-      tilesToRemove[i] = [];
-      tilesToCreate[i] = [];
+      for (let i = 0; i < GRID_SIZE; i++) {
+          tilesToSlide[i] = [];
+          tilesToRemove[i] = [];
+          tilesToCreate[i] = [];
 
-      // Extract the values of the current row
-      const row = tilesValues.slice(i * 4, i * 4 + 4).map(el => el.value);
+          // Extract row values
+          const row = tilesValues.slice(i * 4, i * 4 + 4).map(el => el.value);
 
-      // Slide the row to the specified direction using the TilesHelper class
-      const { newRow } = tilesHelper.slide(row, direction);
+          // Check if movement is possible before sliding
+          if (row.some(v => v !== 0)) {
+              const { newRow } = tilesHelper.slide(row, direction);
 
-      // Check if any movement occurred
-      if (!isArraysEqual(newRow, row)) {
-        // Find movements and merges to update the tiles' positions and values
-        const { movements, merges } = findMovements(row, newRow, direction);
+              if (!isArraysEqual(newRow, row)) {
+                  const { movements, merges } = findMovements(row, newRow, direction);
+                  
+                  movements.forEach((movement) => {
+                      const tile = getTile(tilesValues, i, movement.initialPosition);
+                      if (movement.initialPosition !== movement.finalPosition) {
+                          tilesToSlide[i].push({
+                              tile: tile.tile,
+                              currentPosition: movement.initialPosition,
+                              newPosition: movement.finalPosition,
+                              absoluteCurrentPosition: i * GRID_SIZE + movement.initialPosition,
+                              absoluteFinalPosition: i * GRID_SIZE + movement.finalPosition
+                          });
+                      }
+                  });
 
-        // Update tilesToSlide array with the necessary tile movements
-        movements.forEach((movement) => {
-          const tile = getTile(tilesValues, i, movement.initialPosition);
-          if (movement.initialPosition !== movement.finalPosition) {
-            tilesToSlide[i].push({ tile: tile.tile, currentPosition: movement.initialPosition, newPosition: movement.finalPosition, absoluteCurrentPosition: i * GRID_SIZE + movement.initialPosition, absoluteFinalPosition: i * GRID_SIZE + movement.finalPosition });
+                  merges.forEach((merge, index) => {
+                      const tile = getTile(tilesValues, i, merge.initialPosition);
+                      tilesToRemove[i].push({ tile: tile.tile, position: i * GRID_SIZE + merge.finalPosition, value: row[merge.initialPosition] });
+
+                      if (index % 2 === 1) {
+                          tilesToCreate[i].push({ position: i * GRID_SIZE + merge.finalPosition, value: newRow[merge.finalPosition] });
+                      }
+                  });
+
+                  moved = true;
+              }
           }
-        });
-
-        // Update tilesToRemove and tilesToCreate arrays for tile merging and creation
-        merges.forEach((merge, index) => {
-          const tile = getTile(tilesValues, i, merge.initialPosition);
-          tilesToRemove[i].push({ tile: tile.tile, position: i * GRID_SIZE + merge.finalPosition, value: row[merge.initialPosition] });
-          if (index % 2 === 1) {
-            tilesToCreate[i].push({ position: i * GRID_SIZE + merge.finalPosition, value: newRow[merge.finalPosition] });
-          }
-        });
-
-        // Mark that a move occurred
-        moved = true;
       }
-    }
   }
 
   // Handle up or down movement
   if (direction === 'up' || direction === 'down') {
-    // Iterate through each column of the grid
-    for (let i = 0; i < GRID_SIZE; i++) {
-      // Extract the values of the current column
-      const col = tilesValues.map(el => el.value).filter((el, index) => {
-        return index % 4 === i;
-      });
+      for (let i = 0; i < GRID_SIZE; i++) {
+          const col = tilesValues.map(el => el.value).filter((el, index) => index % 4 === i);
+          tilesToSlide[i] = [];
+          tilesToRemove[i] = [];
+          tilesToCreate[i] = [];
 
-      // Initialize arrays to store tile movements, removals, and creations for each column
-      tilesToSlide[i] = [];
-      tilesToRemove[i] = [];
-      tilesToCreate[i] = [];
+          // Check if movement is possible before sliding
+          if (col.some(v => v !== 0)) {
+              const { newRow: newCol } = tilesHelper.slide(col, direction);
 
-      // Slide the column to the specified direction using the TilesHelper class
-      const { newRow: newCol } = tilesHelper.slide(col, direction);
+              if (!isArraysEqual(newCol, col)) {
+                  const { movements, merges } = findMovements(col, newCol, direction);
 
-      // Check if any movement occurred
-      if (!isArraysEqual(newCol, col)) {
-        // Find movements and merges to update the tiles' positions and values
-        const { movements, merges } = findMovements(col, newCol, direction);
+                  movements.forEach((movement) => {
+                      const tile = getTile(tilesValues, movement.initialPosition, i);
+                      if (movement.initialPosition !== movement.finalPosition) {
+                          tilesToSlide[i].push({
+                              tile: tile.tile,
+                              currentPosition: movement.initialPosition,
+                              newPosition: movement.finalPosition,
+                              absoluteCurrentPosition: movement.initialPosition * GRID_SIZE + i,
+                              absoluteFinalPosition: movement.finalPosition * GRID_SIZE + i
+                          });
+                      }
+                  });
 
-        // Update tilesToSlide array with the necessary tile movements
-        movements.forEach((movement) => {
-          const tile = getTile(tilesValues, movement.initialPosition, i);
-          if (movement.initialPosition !== movement.finalPosition) {
-            tilesToSlide[i].push({ tile: tile.tile, currentPosition: movement.initialPosition, newPosition: movement.finalPosition, absoluteCurrentPosition: movement.initialPosition * GRID_SIZE + i, absoluteFinalPosition: movement.finalPosition * GRID_SIZE + i });
+                  merges.forEach((merge, index) => {
+                      const tile = getTile(tilesValues, merge.initialPosition, i);
+                      tilesToRemove[i].push({ tile: tile.tile, position: merge.finalPosition * GRID_SIZE + i, value: col[merge.initialPosition] });
+
+                      if (index % 2 === 1) {
+                          tilesToCreate[i].push({ position: merge.finalPosition * GRID_SIZE + i, value: newCol[merge.finalPosition] });
+                      }
+                  });
+
+                  moved = true;
+              }
           }
-        });
-
-        // Update tilesToRemove and tilesToCreate arrays for tile merging and creation
-        merges.forEach((merge, index) => {
-          const tile = getTile(tilesValues, merge.initialPosition, i);
-          tilesToRemove[i].push({ tile: tile.tile, position: merge.finalPosition * GRID_SIZE + i, value: col[merge.initialPosition] });
-          if (index % 2 === 1) {
-            tilesToCreate[i].push({ position: merge.finalPosition * GRID_SIZE + i, value: newCol[merge.finalPosition] });
-          }
-        });
-
-        // Mark that a move occurred
-        moved = true;
       }
-    }
   }
 
-  // If any tiles were moved, execute animations, update the grid, and generate a new tile
   if (moved) {
-    for (let i = 0; i < GRID_SIZE; i++) {
-      gridHelper.executeAnimation({ tilesToSlide: tilesToSlide[i], tilesToCreate: tilesToCreate[i], tilesToRemove: tilesToRemove[i], direction });
-    }
-    await sleep(300);
-    gridHelper.generateTile();
+      for (let i = 0; i < GRID_SIZE; i++) {
+          gridHelper.executeAnimation({ tilesToSlide: tilesToSlide[i], tilesToCreate: tilesToCreate[i], tilesToRemove: tilesToRemove[i], direction });
+      }
+      await sleep(300);
+      gridHelper.generateTile();
   }
 }
+
 
 // Game class to handle game initialization and user input
 class Game {
@@ -182,7 +181,11 @@ class Game {
         a: 'left',
         w: 'up',
         d: 'right',
-        s: 'down'
+        s: 'down',
+        ArrowUp:'up',
+        ArrowDown:'down',
+        ArrowRight:'right',
+        ArrowLeft:'left',
       };
       if (movements[event.key]) {
         await move(movements[event.key]);
